@@ -1,0 +1,57 @@
+- hosts: zabbix-server
+  gather_facts: no
+  sudo: yes
+  vars:
+      dbname: zabbix
+      dbuser: zabbix
+      dbpassword: zabbixpassword
+      mysockfile: /var/lib/mysql/mysql.sock
+
+  tasks:
+
+    # package install
+    - name: be sure mysql-server is installed
+      yum: name=mysql-server state=installed
+
+    - name: be sure zabbix is installed
+      yum: name=zabbix state=installed
+
+    - name: be sure zabbix-server is installed
+      yum: name=zabbix-server state=installed
+
+    - name: be sure zabbix-server-mysql is installed
+      yum: name=zabbix-server-mysql state=installed
+
+    # NTP
+    - name: be sure ntp is installed
+      yum: name=ntp state=installed
+
+    - name: service ntpd
+      service: name=ntpd state=running enabled=yes
+
+    # mysql setting
+    - name: /etc/my.cnf add settings
+      copy: src=./resource/my.cnf dest=/etc/my.cnf
+
+    # service mysqld
+    - name: be sure mysqld is running and enabled
+      service: name=mysqld state=running enabled=yes
+
+    # create database and user setting
+    - name: be sure MySQL-python is installed
+      yum: name=MySQL-python state=installed
+
+    - name: mysql create database
+      mysql_db: db=zabbix encoding=utf8
+
+    - name: mysql create user
+      mysql_user: name=zabbix host=localhost password=zabbixpassword priv=zabbix.*:ALL
+
+    # zabbix setting
+    - name: /etc/zabbix/zabbix_server.conf add settings
+      template: src=./resource/zabbix_server.j2 dest=/etc/zabbix/zabbix_server.conf
+
+    # service zabbix-server
+    - name: be sure zabbix-server is running and enabled
+      service: name=zabbix-server state=running enabled=yes
+
