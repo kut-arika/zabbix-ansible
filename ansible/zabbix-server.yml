@@ -7,56 +7,78 @@
       dbuser: zabbix
       dbpassword: zabbixpassword
       mysockfile: /var/lib/mysql/mysql.sock
+      zabbix_version: 2.2.4
 
   tasks:
-    # update 
-    - name: update yum repository
-      yum: name=* state=latest
+    - name: mysql-serverのインストール
+      yum: name=mysql-server state=present
 
-    # package install
-    - name: be sure mysql-server is installed
-      yum: name=mysql-server state=installed
-
-    - name: be sure zabbix is installed
+    - name: zabbixリポジトリの追加
       yum: name=http://repo.zabbix.com/zabbix/2.2/rhel/6/x86_64/zabbix-release-2.2-1.el6.noarch.rpm state=present
-      yum: name=zabbix state=latest
 
-    - name: be sure zabbix-server is installed
-      yum: name=zabbix-server state=latest
+    - name: zabbixのインストール
+      yum: name={{ item }} state=present
+      with_items:
+        - zabbix-server-mysql-{{ zabbix_version }}
+        - zabbix-server-{{ zabbix_version }}
+        - zabbix-{{ zabbix_version }}
 
-    - name: be sure zabbix-server-mysql is installed
-      yum: name=zabbix-server-mysql state=latest
+    # zabbix-webを先に入れるとzabbix-web-pgsqlが依存ライブラリとしてインストールされるためzabbix-web-mysqlから
+    - name: zabbix-web-interfaceのインストール
+      yum: name={{ item }} state=present
+      with_items:
+        - zabbix-web-mysql-{{ zabbix_version }}
+        - zabbix-web-japanese-{{ zabbix_version }}
+        - zabbix-web-{{ zabbix_version }}
 
-    # NTP
-    - name: be sure ntp is installed
-      yum: name=ntp state=installed
+    # ntp package install and enable service
+    - name: ntpのインストール
+      yum: name=ntp state=present
 
-    - name: service ntpd
+#    - name: /etc/ntp.confの配置
+#      copy: src=./resource/ntp.conf dest=/etc/ntp.conf owner=root group=root mode=0644
+
+    - name: ntpdの起動と有効化
       service: name=ntpd state=running enabled=yes
 
-    # mysql setting
-    - name: /etc/my.cnf add settings
-      copy: src=./resource/my.cnf dest=/etc/my.cnf
+    # mysql init
+    - name: /etc/my.cnfの配置
+      copy: src=./resource/my.cnf dest=/etc/my.cnf owner=mysql group=mysql mode=0644
 
-    # service mysqld
-    - name: be sure mysqld is running and enabled
+    - name: mysqldの起動と有効化
       service: name=mysqld state=running enabled=yes
 
-    # create database and user setting
-    - name: be sure MySQL-python is installed
-      yum: name=MySQL-python state=installed
+    - name: MySQL-pythonのインストール # mysqlモジュールを使用するため
+      yum: name=MySQL-python state=present
 
-    - name: mysql create database
-      mysql_db: db=zabbix encoding=utf8
+    - name: zabbix用のDB作成
+      mysql_db: name=zabbix encoding=utf8
 
-    - name: mysql create user
+    - name: zabbix用のユーザ作成
       mysql_user: name=zabbix host=localhost password=zabbixpassword priv=zabbix.*:ALL
 
-    # zabbix setting
-    - name: /etc/zabbix/zabbix_server.conf add settings
-      template: src=./resource/zabbix_server.j2 dest=/etc/zabbix/zabbix_server.conf
+    - name: zabbix用初期データ登録 schema.sql
+      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/schema.sql
 
-    # service zabbix-server
-    - name: be sure zabbix-server is running and enabled
+    - name: zabbix用初期データ登録 images.sql
+      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/images.sql
+
+    - name: zabbix用初期データ登録 data.sql
+      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/data.sql
+
+    # zabbix init
+    - name: /etc/zabbix/zabbix_server.confの配置
+      template: src=./resource/zabbix_server.j2 dest=/etc/zabbix/zabbix_server.conf mode=0644
+
+    - name: zabbix-serverの起動と有効化
       service: name=zabbix-server state=running enabled=yes
 
+    # zabbix web interface init
+    - name: zabbix用httpd.confの修正
+      replace: dest=/etc/httpd/conf.d/zabbix.conf regexp='# php_value date.timezone Europe/Riga' replace='php_value date.timezone Asia/Tokyo'
+
+    - name: /etc/zabbix/web/zabbix.conf.phpの配置
+      copy: src=./resource/zabbix.conf.php dest=/etc/zabbix/web/zabbix.conf.php owner=apache group=apache mode=0644
+
+    - name: httpdの起動と有効化
+      service: name=httpd state=running enabled=yes
