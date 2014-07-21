@@ -57,14 +57,14 @@
     - name: zabbix用のユーザ作成
       mysql_user: name=zabbix host=localhost password=zabbixpassword priv=zabbix.*:ALL
 
-#    - name: zabbix用初期データ登録 schema.sql
-#      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/schema.sql
+    - name: zabbix用初期データ登録 schema.sql
+      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/schema.sql
 
-#    - name: zabbix用初期データ登録 images.sql
-#      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/images.sql
+    - name: zabbix用初期データ登録 images.sql
+      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/images.sql
 
-#    - name: zabbix用初期データ登録 data.sql
-#      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/data.sql
+    - name: zabbix用初期データ登録 data.sql
+      mysql_db: name=zabbix state=import target=/usr/share/doc/zabbix-server-mysql-{{ zabbix_version }}/create/data.sql
 
     # zabbix init
     - name: /etc/zabbix/zabbix_server.confの配置
@@ -85,11 +85,3 @@
 
     - name: httpdの起動と有効化
       service: name=httpd state=running enabled=yes
-
-
-#+--------+-------+--------+---------------+----------------------------------+-----+-----------+------------+-------+---------+------+---------+----------------+------------+---------------+---------------+
-#| userid | alias | name   | surname       | passwd                           | url | autologin | autologout | lang  | refresh | type | theme   | attempt_failed | attempt_ip | attempt_clock | rows_per_page |
-#+--------+-------+--------+---------------+----------------------------------+-----+-----------+------------+-------+---------+------+---------+----------------+------------+---------------+---------------+
-#|      1 | Admin | Zabbix | Administrator | 5fce1b3e34b520afeffb37ce08c7cd66 |     |         1 |          0 | ja_JP |      30 |    3 | default |              0 |            |             0 |            50 |
-#|      2 | guest |        |               | d41d8cd98f00b204e9800998ecf8427e |     |         0 |        900 | en_GB |      30 |    1 | default |              0 |            |             0 |            50 |
-#+--------+-------+--------+---------------+----------------------------------+-----+-----------+------------+-------+---------+------+---------+----------------+------------+---------------+---------------+
