@@ -1,0 +1,23 @@
+- hosts: zabbix-agent
+  gather_facts: no
+  remote_user: vagrant
+  sudo: yes
+  vars:
+      server: 192.168.34.10
+      zabbix_version: 2.2.4
+
+  tasks:
+    - name: zabbixリポジトリの追加
+      yum: name=http://repo.zabbix.com/zabbix/2.2/rhel/6/x86_64/zabbix-release-2.2-1.el6.noarch.rpm state=present
+
+    - name: zabbix-agentのインストール
+      yum: name={{ item }} state=present
+      with_items:
+        - zabbix-agent-{{ zabbix_version }}
+        - zabbix-{{ zabbix_version }}
+
+    - name: /etc/zabbix/zabbix_agentd.confの配置
+      template: src=./resource/zabbix_agentd.j2 dest=/etc/zabbix/zabbix_agentd.conf mode=0644
+
+    - name: zabbix-agentの起動と有効化
+      service: name=zabbix-agent state=running enabled=yes
